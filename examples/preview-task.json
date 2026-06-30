@@ -1,0 +1,106 @@
+{
+  "apiVersion": "repoeval.dev/v1alpha1",
+  "kind": "Task",
+  "metadata": {
+    "id": "duplicate-email-example",
+    "title": "Duplicate email should be rejected",
+    "source": {
+      "type": "github",
+      "repository": "https://github.com/example/project",
+      "issue": 123,
+      "pullRequest": 456
+    },
+    "provenance": {
+      "license": "TBD",
+      "redistribution": "pointer-only"
+    }
+  },
+  "spec": {
+    "repository": {
+      "url": "https://github.com/example/project.git",
+      "base": "0123456789abcdef0123456789abcdef01234567",
+      "submodules": "disabled"
+    },
+    "environment": {
+      "image": "python:3.13",
+      "toolchains": [
+        {
+          "name": "python",
+          "command": "python",
+          "versionArgs": [
+            "--version"
+          ],
+          "versionConstraint": ">=3.11",
+          "required": true
+        }
+      ],
+      "env": {
+        "PYTHONPATH": "src"
+      },
+      "setup": [],
+      "network": {
+        "checkout": "enabled",
+        "setup": "enabled",
+        "reproduce": "disabled"
+      },
+      "resources": {
+        "timeoutSeconds": 600,
+        "memoryMb": 2048,
+        "maxOutputBytes": 65536
+      }
+    },
+    "reproductionAssets": {
+      "inlineFiles": [
+        {
+          "path": "repoeval_repro.py",
+          "language": "python",
+          "content": "def test_duplicate_email_rejected(client):\n    response = client.post('/users', json={'email': 'a@example.com'})\n    assert response.status_code == 409\n"
+        }
+      ]
+    },
+    "reproduce": {
+      "command": {
+        "argv": [
+          "python",
+          "-m",
+          "pytest",
+          "repoeval_repro.py::test_duplicate_email_rejected"
+        ],
+        "shell": false,
+        "workingDirectory": ".",
+        "timeoutSeconds": 120
+      }
+    },
+    "oracle": {
+      "base": {
+        "expectedExit": "nonzero",
+        "expectedStderrContains": "AssertionError"
+      },
+      "candidate": {
+        "expectedExit": 0
+      }
+    },
+    "scope": {
+      "allow": [
+        "src/api/**",
+        "tests/api/**"
+      ],
+      "deny": [
+        ".github/**",
+        "infra/**"
+      ]
+    },
+    "artifacts": {
+      "includePaths": [
+        "junit.xml"
+      ],
+      "logs": {
+        "maxBytesPerStream": 65536
+      },
+      "redact": [
+        "env:*TOKEN*",
+        "env:*SECRET*"
+      ]
+    }
+  }
+}

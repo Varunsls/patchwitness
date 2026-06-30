@@ -1,0 +1,37 @@
+{
+  "apiVersion": "repoeval.dev/v1alpha1",
+  "kind": "RunInput",
+  "metadata": {
+    "id": "duplicate-email-pr-456",
+    "createdAt": "2026-06-29T00:00:00-04:00",
+    "source": {
+      "type": "cli"
+    }
+  },
+  "spec": {
+    "taskRef": {
+      "id": "duplicate-email-example"
+    },
+    "candidate": {
+      "type": "pull-request",
+      "repository": {
+        "url": "https://github.com/example/project.git"
+      },
+      "ref": "refs/pull/456/head",
+      "revision": "abcdef0123456789abcdef0123456789abcdef01"
+    },
+    "execution": {
+      "mode": "local",
+      "allowContainerFallback": false,
+      "cleanWorkspaces": true,
+      "uploadTelemetry": false
+    },
+    "reporting": {
+      "formats": [
+        "json",
+        "markdown"
+      ],
+      "advisoryComment": false
+    }
+  }
+}
