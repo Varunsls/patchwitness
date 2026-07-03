@@ -17,6 +17,7 @@ desktop.ini
 # Python
 __pycache__/
 *.py[cod]
+*.egg-info/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
@@ -51,4 +52,3 @@ validation/artifacts/
 .cache/
 .parcel-cache/
 .turbo/
-

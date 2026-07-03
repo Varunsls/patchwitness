@@ -1,0 +1,44 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install package
+        run: python -m pip install .
+
+      - name: Compile sources
+        run: python -m compileall -q src tests examples
+
+      - name: Run tests
+        run: python -m unittest discover -s tests
+
+      - name: Run local demo
+        run: python examples/local_demo.py
+
+      - name: Check evidence redaction
+        run: |
+          test -f out/local-demo/evidence/evidence-bundle.json
+          ! grep -R "$GITHUB_WORKSPACE" out/local-demo/evidence
+
+      - name: Inspect example contracts
+        run: python -m patchwitness inspect --task examples/preview-task.json --run-input examples/preview-run-input.json
