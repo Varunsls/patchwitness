@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 from patchwitness.core import load_contracts, render_markdown_report, write_json
@@ -25,9 +28,10 @@ def run_demo(out_dir: Path) -> dict[str, Path | str]:
     fix_repo(repo)
     candidate = git(repo, "rev-parse", "HEAD")
 
-    task_path, run_input_path = write_contracts(contracts_dir, repo, base, candidate)
+    task_path, run_input_path = write_contracts(contracts_dir, base, candidate)
     contracts = load_contracts(task_path, run_input_path)
-    evidence = run_local_evidence(contracts)
+    with working_directory(demo_root):
+        evidence = run_local_evidence(contracts)
 
     evidence_path = evidence_dir / "evidence-bundle.json"
     report_path = evidence_dir / "report.md"
@@ -49,6 +53,16 @@ def reset_demo_dir(demo_root: Path) -> None:
         if not resolved.is_relative_to(parent):
             raise RuntimeError(f"Refusing to remove outside output parent: {resolved}")
         shutil.rmtree(resolved)
+
+
+@contextmanager
+def working_directory(path: Path) -> Iterator[None]:
+    previous = Path.cwd()
+    os.chdir(path.resolve())
+    try:
+        yield
+    finally:
+        os.chdir(previous)
 
 
 def create_repo(repo: Path) -> None:
@@ -80,8 +94,8 @@ def git(repo: Path, *args: str) -> str:
     return result.stdout.strip()
 
 
-def write_contracts(contracts_dir: Path, repo: Path, base: str, candidate: str) -> tuple[Path, Path]:
-    repo_url = str(repo)
+def write_contracts(contracts_dir: Path, base: str, candidate: str) -> tuple[Path, Path]:
+    repo_url = "repo"
     task = {
         "apiVersion": "repoeval.dev/v1alpha1",
         "kind": "Task",
