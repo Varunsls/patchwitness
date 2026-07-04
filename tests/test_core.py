@@ -6,6 +6,8 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 
 from patchwitness.core import (
@@ -15,6 +17,7 @@ from patchwitness.core import (
     inspect_contracts,
     load_contracts,
 )
+from patchwitness.cli import main as cli_main
 from patchwitness.demo import run_demo
 from patchwitness.executor import run_local_evidence
 
@@ -131,6 +134,44 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(result["failureCode"], "evidence.created")
         self.assertEqual(evidence["results"]["verdict"], "pass")
         self.assertNotIn(str(Path(tmp)), json.dumps(evidence))
+
+    @unittest.skipIf(shutil.which("git") is None, "git is required for local executor tests")
+    def test_init_command_writes_runnable_contracts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            paths = create_demo_repo(root)
+            out = root / "contracts"
+
+            with redirect_stdout(StringIO()):
+                exit_code = cli_main(
+                    [
+                        "init",
+                        "--task-id",
+                        "generated-duplicate-email",
+                        "--title",
+                        "Generated duplicate email check",
+                        "--repo",
+                        paths["repo"],
+                        "--base",
+                        paths["base"],
+                        "--candidate",
+                        paths["candidate"],
+                        "--out",
+                        str(out),
+                        "--",
+                        sys.executable,
+                        "-c",
+                        "from app import is_duplicate; assert is_duplicate('a@example.com', {'a@example.com'})",
+                    ]
+                )
+
+            contracts = load_contracts(out / "task.json", out / "run-input.json")
+            evidence = run_local_evidence(contracts, work_root=root / "work")
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(contracts.task["metadata"]["id"], "generated-duplicate-email")
+        self.assertEqual(contracts.task["spec"]["reproduce"]["command"]["argv"][0], sys.executable)
+        self.assertEqual(evidence["results"]["verdict"], "pass")
 
 
 def create_demo_repo(root: Path, include_scope_violation: bool = False) -> dict[str, str]:

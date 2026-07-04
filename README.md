@@ -51,6 +51,13 @@ Run against contracts:
 python -m patchwitness run --task path/to/task.json --run-input path/to/run-input.json --out out/evidence
 ```
 
+Create contracts for a local repository:
+
+```powershell
+python -m patchwitness init --task-id duplicate-email --base main --candidate HEAD --out .patchwitness -- python -m pytest tests/test_duplicate_email.py
+python -m patchwitness run --task .patchwitness/task.json --run-input .patchwitness/run-input.json
+```
+
 ## What It Does
 
 - loads `Task` and `RunInput` JSON contracts
