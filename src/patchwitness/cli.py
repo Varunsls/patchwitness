@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -52,6 +53,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=Path("out/patchwitness"),
         help="Output directory for preview evidence.",
     )
+    add_github_summary_arg(evidence_parser)
     evidence_parser.set_defaults(func=run_preview_evidence)
 
     run_parser = subparsers.add_parser(
@@ -71,6 +73,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional parent directory for temporary workspaces.",
     )
+    add_github_summary_arg(run_parser)
     run_parser.set_defaults(func=run_evidence)
 
     demo_parser = subparsers.add_parser(
@@ -83,6 +86,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=Path("out/local-demo"),
         help="Output directory for the demo repository, contracts, and evidence.",
     )
+    add_github_summary_arg(demo_parser)
     demo_parser.set_defaults(func=run_demo_command)
 
     init_parser = subparsers.add_parser(
@@ -127,6 +131,14 @@ def add_contract_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--run-input", required=True, type=Path, help="RunInput contract path.")
 
 
+def add_github_summary_arg(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--github-step-summary",
+        action="store_true",
+        help="Append the Markdown report to $GITHUB_STEP_SUMMARY.",
+    )
+
+
 def run_inspect(args: argparse.Namespace) -> int:
     contracts = load_contracts(args.task, args.run_input)
     inspection = inspect_contracts(contracts)
@@ -153,8 +165,10 @@ def run_preview_evidence(args: argparse.Namespace) -> int:
     args.out.mkdir(parents=True, exist_ok=True)
     evidence_path = args.out / "evidence-bundle.json"
     report_path = args.out / "report.md"
+    report = render_markdown_report(evidence)
     write_json(evidence_path, evidence)
-    report_path.write_text(render_markdown_report(evidence), encoding="utf-8")
+    report_path.write_text(report, encoding="utf-8")
+    append_github_step_summary(args.github_step_summary, report)
 
     print(f"Wrote {evidence_path}")
     print(f"Wrote {report_path}")
@@ -168,8 +182,10 @@ def run_evidence(args: argparse.Namespace) -> int:
     args.out.mkdir(parents=True, exist_ok=True)
     evidence_path = args.out / "evidence-bundle.json"
     report_path = args.out / "report.md"
+    report = render_markdown_report(evidence)
     write_json(evidence_path, evidence)
-    report_path.write_text(render_markdown_report(evidence), encoding="utf-8")
+    report_path.write_text(report, encoding="utf-8")
+    append_github_step_summary(args.github_step_summary, report)
 
     print(f"Wrote {evidence_path}")
     print(f"Wrote {report_path}")
@@ -179,11 +195,31 @@ def run_evidence(args: argparse.Namespace) -> int:
 
 def run_demo_command(args: argparse.Namespace) -> int:
     result = run_demo(args.out)
+    if args.github_step_summary:
+        report = Path(result["reportPath"]).read_text(encoding="utf-8")
+        append_github_step_summary(True, report)
     print("PatchWitness local demo completed.")
     print(f"Verdict: {result['verdict']} ({result['failureCode']})")
     print(f"Evidence JSON: {result['evidencePath']}")
     print(f"Markdown report: {result['reportPath']}")
     return 0 if result["verdict"] == "pass" else 1
+
+
+def append_github_step_summary(enabled: bool, markdown: str) -> None:
+    if not enabled:
+        return
+
+    summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+    if not summary_path:
+        raise PatchWitnessError("reporting.failed", "GITHUB_STEP_SUMMARY is not set.")
+
+    path = Path(summary_path)
+    with path.open("a", encoding="utf-8") as handle:
+        if path.exists() and path.stat().st_size:
+            handle.write("\n")
+        handle.write(markdown)
+        if not markdown.endswith("\n"):
+            handle.write("\n")
 
 
 def run_init(args: argparse.Namespace) -> int:

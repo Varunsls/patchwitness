@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -9,6 +10,7 @@ import unittest
 from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
+from unittest.mock import patch
 
 from patchwitness.core import (
     PatchWitnessError,
@@ -59,6 +61,33 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(evidence["kind"], "EvidenceBundle")
         self.assertEqual(evidence["results"]["verdict"], "inconclusive")
         self.assertEqual(evidence["results"]["failureCode"], "runner.preview_only")
+
+    def test_preview_evidence_appends_github_step_summary(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            out = root / "out"
+            summary_path = root / "summary.md"
+
+            with patch.dict(os.environ, {"GITHUB_STEP_SUMMARY": str(summary_path)}), redirect_stdout(StringIO()):
+                exit_code = cli_main(
+                    [
+                        "preview-evidence",
+                        "--task",
+                        str(ROOT / "examples" / "preview-task.json"),
+                        "--run-input",
+                        str(ROOT / "examples" / "preview-run-input.json"),
+                        "--out",
+                        str(out),
+                        "--github-step-summary",
+                    ]
+                )
+
+            report = (out / "report.md").read_text(encoding="utf-8")
+            summary = summary_path.read_text(encoding="utf-8")
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(summary, report)
+        self.assertIn("# PatchWitness Preview Evidence", summary)
 
     def test_run_input_must_match_task_id(self) -> None:
         task_path = ROOT / "examples" / "preview-task.json"

@@ -58,6 +58,9 @@ python -m patchwitness init --task-id duplicate-email --base main --candidate HE
 python -m patchwitness run --task .patchwitness/task.json --run-input .patchwitness/run-input.json
 ```
 
+In GitHub Actions, add `--github-step-summary` to publish the Markdown report
+in the job summary.
+
 ## What It Does
 
 - loads `Task` and `RunInput` JSON contracts
