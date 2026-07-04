@@ -15,6 +15,7 @@ from patchwitness.core import (
     inspect_contracts,
     load_contracts,
 )
+from patchwitness.demo import run_demo
 from patchwitness.executor import run_local_evidence
 
 
@@ -119,6 +120,17 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(evidence["results"]["verdict"], "fail")
         self.assertEqual(evidence["results"]["failureCode"], "scope.violation")
         self.assertEqual(evidence["results"]["scope"]["outOfScopeFiles"], ["README.md"])
+
+    @unittest.skipIf(shutil.which("git") is None, "git is required for local executor tests")
+    def test_package_demo_creates_passing_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            result = run_demo(Path(tmp) / "demo")
+            evidence = json.loads(Path(result["evidencePath"]).read_text(encoding="utf-8"))
+
+        self.assertEqual(result["verdict"], "pass")
+        self.assertEqual(result["failureCode"], "evidence.created")
+        self.assertEqual(evidence["results"]["verdict"], "pass")
+        self.assertNotIn(str(Path(tmp)), json.dumps(evidence))
 
 
 def create_demo_repo(root: Path, include_scope_violation: bool = False) -> dict[str, str]:

@@ -27,11 +27,11 @@ security, correctness, compliance, or AI authorship.
 From the repository root:
 
 ```powershell
-$env:PYTHONPATH = "src"
-python examples/local_demo.py
+python -m pip install .
+python -m patchwitness demo
 ```
 
-The demo creates a temporary local Git repository under `out/local-demo`, runs a
+The demo creates a local Git repository under `out/local-demo`, runs a
 fail-before/pass-after check, and writes:
 
 ```text
@@ -42,14 +42,12 @@ out/local-demo/evidence/report.md
 Inspect static example contracts:
 
 ```powershell
-$env:PYTHONPATH = "src"
 python -m patchwitness inspect --task examples/preview-task.json --run-input examples/preview-run-input.json
 ```
 
 Run against contracts:
 
 ```powershell
-$env:PYTHONPATH = "src"
 python -m patchwitness run --task path/to/task.json --run-input path/to/run-input.json --out out/evidence
 ```
 

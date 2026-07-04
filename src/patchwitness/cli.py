@@ -14,6 +14,7 @@ from patchwitness.core import (
     render_markdown_report,
     write_json,
 )
+from patchwitness.demo import run_demo
 from patchwitness.executor import run_local_evidence
 
 
@@ -67,6 +68,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional parent directory for temporary workspaces.",
     )
     run_parser.set_defaults(func=run_evidence)
+
+    demo_parser = subparsers.add_parser(
+        "demo",
+        help="Create a local demo repository and produce passing evidence.",
+    )
+    demo_parser.add_argument(
+        "--out",
+        type=Path,
+        default=Path("out/local-demo"),
+        help="Output directory for the demo repository, contracts, and evidence.",
+    )
+    demo_parser.set_defaults(func=run_demo_command)
 
     return parser
 
@@ -124,6 +137,15 @@ def run_evidence(args: argparse.Namespace) -> int:
     print(f"Wrote {report_path}")
     print(f"Verdict: {evidence['results']['verdict']} ({evidence['results']['failureCode']})")
     return 0 if evidence["results"]["verdict"] == "pass" else 1
+
+
+def run_demo_command(args: argparse.Namespace) -> int:
+    result = run_demo(args.out)
+    print("PatchWitness local demo completed.")
+    print(f"Verdict: {result['verdict']} ({result['failureCode']})")
+    print(f"Evidence JSON: {result['evidencePath']}")
+    print(f"Markdown report: {result['reportPath']}")
+    return 0 if result["verdict"] == "pass" else 1
 
 
 def main(argv: list[str] | None = None) -> int:

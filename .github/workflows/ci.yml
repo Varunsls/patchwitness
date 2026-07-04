@@ -33,7 +33,7 @@ jobs:
         run: python -m unittest discover -s tests
 
       - name: Run local demo
-        run: python examples/local_demo.py
+        run: python -m patchwitness demo
 
       - name: Check evidence redaction
         run: |
