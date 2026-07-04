@@ -61,6 +61,15 @@ python -m patchwitness run --task .patchwitness/task.json --run-input .patchwitn
 In GitHub Actions, add `--github-step-summary` to publish the Markdown report
 in the job summary.
 
+Or run it as an action after `actions/checkout` and `actions/setup-python`:
+
+```yaml
+- uses: Varunsls/patchwitness@main
+  with:
+    task: .patchwitness/task.json
+    run-input: .patchwitness/run-input.json
+```
+
 ## What It Does
 
 - loads `Task` and `RunInput` JSON contracts

@@ -62,6 +62,16 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(evidence["results"]["verdict"], "inconclusive")
         self.assertEqual(evidence["results"]["failureCode"], "runner.preview_only")
 
+    def test_action_metadata_exposes_required_inputs(self) -> None:
+        action = (ROOT / "action.yml").read_text(encoding="utf-8")
+
+        self.assertIn("using: composite", action)
+        self.assertIn("task:", action)
+        self.assertIn("run-input:", action)
+        self.assertIn("github-step-summary:", action)
+        self.assertIn('python -m pip install "$GITHUB_ACTION_PATH"', action)
+        self.assertIn("python -m patchwitness run", action)
+
     def test_preview_evidence_appends_github_step_summary(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

@@ -35,10 +35,20 @@ jobs:
       - name: Run local demo
         run: python -m patchwitness demo
 
+      - name: Exercise local action
+        uses: ./
+        with:
+          task: contracts/task.json
+          run-input: contracts/run-input.json
+          out: action-evidence
+          working-directory: out/local-demo
+          github-step-summary: false
+
       - name: Check evidence redaction
         run: |
           test -f out/local-demo/evidence/evidence-bundle.json
-          ! grep -R "$GITHUB_WORKSPACE" out/local-demo/evidence
+          test -f out/local-demo/action-evidence/evidence-bundle.json
+          ! grep -R "$GITHUB_WORKSPACE" out/local-demo/evidence out/local-demo/action-evidence
 
       - name: Inspect example contracts
         run: python -m patchwitness inspect --task examples/preview-task.json --run-input examples/preview-run-input.json

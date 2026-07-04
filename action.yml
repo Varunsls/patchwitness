@@ -1,0 +1,86 @@
+name: PatchWitness Evidence
+description: Run PatchWitness executable evidence and publish a Markdown report.
+
+inputs:
+  task:
+    description: Path to the Task contract.
+    required: true
+  run-input:
+    description: Path to the RunInput contract.
+    required: true
+  out:
+    description: Output directory for evidence.
+    required: false
+    default: out/patchwitness
+  work-dir:
+    description: Optional parent directory for temporary workspaces.
+    required: false
+    default: ""
+  working-directory:
+    description: Directory where PatchWitness should run.
+    required: false
+    default: "."
+  github-step-summary:
+    description: Append the Markdown report to the GitHub Actions job summary.
+    required: false
+    default: "true"
+
+outputs:
+  evidence-bundle:
+    description: Path to the EvidenceBundle JSON file.
+    value: ${{ steps.paths.outputs.evidence-bundle }}
+  report:
+    description: Path to the Markdown report.
+    value: ${{ steps.paths.outputs.report }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install PatchWitness
+      shell: bash
+      run: python -m pip install "$GITHUB_ACTION_PATH"
+
+    - name: Run PatchWitness
+      shell: bash
+      env:
+        PATCHWITNESS_TASK: ${{ inputs.task }}
+        PATCHWITNESS_RUN_INPUT: ${{ inputs.run-input }}
+        PATCHWITNESS_OUT: ${{ inputs.out }}
+        PATCHWITNESS_WORK_DIR: ${{ inputs.work-dir }}
+        PATCHWITNESS_WORKING_DIRECTORY: ${{ inputs.working-directory }}
+        PATCHWITNESS_GITHUB_STEP_SUMMARY: ${{ inputs.github-step-summary }}
+      run: |
+        set -euo pipefail
+        cd "$PATCHWITNESS_WORKING_DIRECTORY"
+
+        args=(
+          --task "$PATCHWITNESS_TASK"
+          --run-input "$PATCHWITNESS_RUN_INPUT"
+          --out "$PATCHWITNESS_OUT"
+        )
+
+        if [ -n "$PATCHWITNESS_WORK_DIR" ]; then
+          args+=(--work-dir "$PATCHWITNESS_WORK_DIR")
+        fi
+
+        case "$PATCHWITNESS_GITHUB_STEP_SUMMARY" in
+          true|True|TRUE|1|yes|Yes|YES) args+=(--github-step-summary) ;;
+        esac
+
+        python -m patchwitness run "${args[@]}"
+
+    - name: Set output paths
+      id: paths
+      shell: bash
+      env:
+        PATCHWITNESS_OUT: ${{ inputs.out }}
+        PATCHWITNESS_WORKING_DIRECTORY: ${{ inputs.working-directory }}
+      run: |
+        set -euo pipefail
+        prefix=""
+        if [ "$PATCHWITNESS_WORKING_DIRECTORY" != "." ]; then
+          prefix="${PATCHWITNESS_WORKING_DIRECTORY%/}/"
+        fi
+        out="${PATCHWITNESS_OUT%/}"
+        echo "evidence-bundle=${prefix}${out}/evidence-bundle.json" >> "$GITHUB_OUTPUT"
+        echo "report=${prefix}${out}/report.md" >> "$GITHUB_OUTPUT"
