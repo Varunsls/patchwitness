@@ -70,6 +70,9 @@ Or run it as an action after `actions/checkout` and `actions/setup-python`:
     run-input: .patchwitness/run-input.json
 ```
 
+The action exposes `verdict`, `failure-code`, `evidence-bundle`, and `report`
+outputs.
+
 ## What It Does
 
 - loads `Task` and `RunInput` JSON contracts

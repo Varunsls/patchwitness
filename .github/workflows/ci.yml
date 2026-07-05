@@ -36,6 +36,7 @@ jobs:
         run: python -m patchwitness demo
 
       - name: Exercise local action
+        id: patchwitness-action
         uses: ./
         with:
           task: contracts/task.json
@@ -43,6 +44,18 @@ jobs:
           out: action-evidence
           working-directory: out/local-demo
           github-step-summary: false
+
+      - name: Check action outputs
+        env:
+          PW_EVIDENCE_BUNDLE: ${{ steps.patchwitness-action.outputs.evidence-bundle }}
+          PW_REPORT: ${{ steps.patchwitness-action.outputs.report }}
+          PW_VERDICT: ${{ steps.patchwitness-action.outputs.verdict }}
+          PW_FAILURE_CODE: ${{ steps.patchwitness-action.outputs.failure-code }}
+        run: |
+          test "$PW_VERDICT" = "pass"
+          test "$PW_FAILURE_CODE" = "evidence.created"
+          test -f "$PW_EVIDENCE_BUNDLE"
+          test -f "$PW_REPORT"
 
       - name: Check evidence redaction
         run: |

@@ -32,6 +32,12 @@ outputs:
   report:
     description: Path to the Markdown report.
     value: ${{ steps.paths.outputs.report }}
+  verdict:
+    description: PatchWitness verdict.
+    value: ${{ steps.paths.outputs.verdict }}
+  failure-code:
+    description: PatchWitness failure code.
+    value: ${{ steps.paths.outputs.failure-code }}
 
 runs:
   using: composite
@@ -82,5 +88,19 @@ runs:
           prefix="${PATCHWITNESS_WORKING_DIRECTORY%/}/"
         fi
         out="${PATCHWITNESS_OUT%/}"
-        echo "evidence-bundle=${prefix}${out}/evidence-bundle.json" >> "$GITHUB_OUTPUT"
-        echo "report=${prefix}${out}/report.md" >> "$GITHUB_OUTPUT"
+        evidence_path="${prefix}${out}/evidence-bundle.json"
+        report_path="${prefix}${out}/report.md"
+
+        echo "evidence-bundle=${evidence_path}" >> "$GITHUB_OUTPUT"
+        echo "report=${report_path}" >> "$GITHUB_OUTPUT"
+        python - "$evidence_path" "$GITHUB_OUTPUT" <<'PY'
+        import json
+        import sys
+        from pathlib import Path
+
+        evidence = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+        results = evidence["results"]
+        with Path(sys.argv[2]).open("a", encoding="utf-8") as output:
+            output.write(f"verdict={results['verdict']}\n")
+            output.write(f"failure-code={results['failureCode']}\n")
+        PY
