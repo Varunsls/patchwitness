@@ -73,6 +73,8 @@ Or run it as an action after `actions/checkout` and `actions/setup-python`:
 The action exposes `verdict`, `failure-code`, `evidence-bundle`, and `report`
 outputs.
 
+Set `fail-on-verdict: false` to collect outputs without failing the action.
+
 ## What It Does
 
 - loads `Task` and `RunInput` JSON contracts

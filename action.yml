@@ -24,6 +24,10 @@ inputs:
     description: Append the Markdown report to the GitHub Actions job summary.
     required: false
     default: "true"
+  fail-on-verdict:
+    description: Fail the action when the PatchWitness verdict is not pass.
+    required: false
+    default: "true"
 
 outputs:
   evidence-bundle:
@@ -47,6 +51,7 @@ runs:
       run: python -m pip install "$GITHUB_ACTION_PATH"
 
     - name: Run PatchWitness
+      id: run
       shell: bash
       env:
         PATCHWITNESS_TASK: ${{ inputs.task }}
@@ -73,7 +78,12 @@ runs:
           true|True|TRUE|1|yes|Yes|YES) args+=(--github-step-summary) ;;
         esac
 
+        set +e
         python -m patchwitness run "${args[@]}"
+        exit_code=$?
+        set -e
+
+        echo "exit-code=${exit_code}" >> "$GITHUB_OUTPUT"
 
     - name: Set output paths
       id: paths
@@ -104,3 +114,18 @@ runs:
             output.write(f"verdict={results['verdict']}\n")
             output.write(f"failure-code={results['failureCode']}\n")
         PY
+
+    - name: Enforce verdict
+      shell: bash
+      env:
+        PATCHWITNESS_EXIT_CODE: ${{ steps.run.outputs.exit-code }}
+        PATCHWITNESS_FAIL_ON_VERDICT: ${{ inputs.fail-on-verdict }}
+      run: |
+        set -euo pipefail
+        case "$PATCHWITNESS_FAIL_ON_VERDICT" in
+          true|True|TRUE|1|yes|Yes|YES)
+            if [ "$PATCHWITNESS_EXIT_CODE" != "0" ]; then
+              exit "$PATCHWITNESS_EXIT_CODE"
+            fi
+            ;;
+        esac

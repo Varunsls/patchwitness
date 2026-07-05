@@ -35,6 +35,19 @@ jobs:
       - name: Run local demo
         run: python -m patchwitness demo
 
+      - name: Create failing demo run input
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          contracts = Path("out/local-demo/contracts")
+          task = json.loads((contracts / "task.json").read_text(encoding="utf-8"))
+          run_input = json.loads((contracts / "run-input.json").read_text(encoding="utf-8"))
+          run_input["spec"]["candidate"]["revision"] = task["spec"]["repository"]["base"]
+          (contracts / "run-input-fail.json").write_text(json.dumps(run_input, indent=2) + "\n", encoding="utf-8")
+          PY
+
       - name: Exercise local action
         id: patchwitness-action
         uses: ./
@@ -57,11 +70,35 @@ jobs:
           test -f "$PW_EVIDENCE_BUNDLE"
           test -f "$PW_REPORT"
 
+      - name: Exercise local action with failing verdict
+        id: patchwitness-fail-action
+        uses: ./
+        with:
+          task: contracts/task.json
+          run-input: contracts/run-input-fail.json
+          out: action-fail-evidence
+          working-directory: out/local-demo
+          github-step-summary: false
+          fail-on-verdict: false
+
+      - name: Check failing action outputs
+        env:
+          PW_EVIDENCE_BUNDLE: ${{ steps.patchwitness-fail-action.outputs.evidence-bundle }}
+          PW_REPORT: ${{ steps.patchwitness-fail-action.outputs.report }}
+          PW_VERDICT: ${{ steps.patchwitness-fail-action.outputs.verdict }}
+          PW_FAILURE_CODE: ${{ steps.patchwitness-fail-action.outputs.failure-code }}
+        run: |
+          test "$PW_VERDICT" = "fail"
+          test "$PW_FAILURE_CODE" = "candidate.did_not_pass"
+          test -f "$PW_EVIDENCE_BUNDLE"
+          test -f "$PW_REPORT"
+
       - name: Check evidence redaction
         run: |
           test -f out/local-demo/evidence/evidence-bundle.json
           test -f out/local-demo/action-evidence/evidence-bundle.json
-          ! grep -R "$GITHUB_WORKSPACE" out/local-demo/evidence out/local-demo/action-evidence
+          test -f out/local-demo/action-fail-evidence/evidence-bundle.json
+          ! grep -R "$GITHUB_WORKSPACE" out/local-demo/evidence out/local-demo/action-evidence out/local-demo/action-fail-evidence
 
       - name: Inspect example contracts
         run: python -m patchwitness inspect --task examples/preview-task.json --run-input examples/preview-run-input.json

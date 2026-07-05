@@ -69,8 +69,10 @@ class CoreTests(unittest.TestCase):
         self.assertIn("task:", action)
         self.assertIn("run-input:", action)
         self.assertIn("github-step-summary:", action)
+        self.assertIn("fail-on-verdict:", action)
         self.assertIn("verdict:", action)
         self.assertIn("failure-code:", action)
+        self.assertIn("exit-code=", action)
         self.assertIn('python -m pip install "$GITHUB_ACTION_PATH"', action)
         self.assertIn("python -m patchwitness run", action)
 
